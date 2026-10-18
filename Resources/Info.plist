@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>ShiftDrop</string>
+    <key>CFBundleDisplayName</key>
+    <string>ShiftDrop</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.dcatmakas.shiftdrop</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>ShiftDrop</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>ShiftDrop saves converted files next to the originals.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>ShiftDrop saves converted files next to the originals.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>ShiftDrop saves converted files next to the originals.</string>
+</dict>
+</plist>
