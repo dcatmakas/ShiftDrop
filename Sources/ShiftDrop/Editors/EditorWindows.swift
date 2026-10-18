@@ -17,6 +17,7 @@ enum EditorWindows {
             return
         }
         #if DEBUG
+        debugState = { "crop=\(Int(model.rect.minX)),\(Int(model.rect.minY)),\(Int(model.rect.width))x\(Int(model.rect.height))" }
         // Lets README screenshots show a crop in progress: SHIFTDROP_DEMO_CROP=square|wide|...
         if let raw = ProcessInfo.processInfo.environment["SHIFTDROP_DEMO_CROP"], let aspect = CropAspect(rawValue: raw) {
             model.aspect = aspect
@@ -36,10 +37,18 @@ enum EditorWindows {
             showError(error, for: url)
             return
         }
+        #if DEBUG
+        debugState = { "padding=\(Int(model.padding))" }
+        #endif
         present(title: "Add background", size: NSSize(width: 560, height: 700)) { close in
             BackgroundEditorView(model: model, onClose: close, onSaved: onSaved)
         }
     }
+
+    #if DEBUG
+    /// Describes the open editor's model, for the drag self-test in debug builds.
+    static var debugState: (() -> String)?
+    #endif
 
     // MARK: - Window management
 
@@ -57,7 +66,9 @@ enum EditorWindows {
         window.title = title
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
+        // Not movable by background: the window server would start a window drag before SwiftUI's
+        // crop handles and sliders ever see the mouse. The title strip still moves the window.
+        window.isMovableByWindowBackground = false
         window.isReleasedWhenClosed = false
         // Narrower than the design width would clip the swatch rows and pickers.
         window.minSize = NSSize(width: size.width, height: 520)

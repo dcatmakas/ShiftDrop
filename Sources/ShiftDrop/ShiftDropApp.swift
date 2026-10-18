@@ -48,6 +48,46 @@ final class AppState: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// SHIFTDROP_SELFTEST_DRAG="x,y,dx,dy" (points from the window's top-left) drags with synthetic
+    /// mouse events inside the open editor and prints whether the window or the editor moved.
+    static func selfTestDrag(_ spec: String) {
+        let n = spec.split(separator: ",").compactMap { Double($0) }
+        guard n.count == 4, let window = NSApp.windows.first(where: { $0.isVisible && $0.styleMask.contains(.titled) }),
+              let content = window.contentView else {
+            print("SELFTEST error: no editor window"); NSApp.terminate(nil); return
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        let start = NSPoint(x: n[0], y: content.bounds.height - n[1])
+        let frameBefore = window.frame.origin
+        let hit = content.hitTest(content.convert(start, from: nil))
+        print("SELFTEST hitView=\(hit.map { String(describing: type(of: $0)) } ?? "nil") canMoveWindow=\(hit?.mouseDownCanMoveWindow ?? false) movableByBackground=\(window.isMovableByWindowBackground)")
+        let stateBefore = EditorWindows.debugState?() ?? "-"
+
+        func post(_ type: NSEvent.EventType, _ point: NSPoint) {
+            let event = NSEvent.mouseEvent(
+                with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1,
+                pressure: type == .leftMouseUp ? 0 : 1
+            )!
+            NSApp.postEvent(event, atStart: false)
+        }
+        post(.leftMouseDown, start)
+        for step in 1...12 {
+            let f = Double(step) / 12
+            post(.leftMouseDragged, NSPoint(x: start.x + n[2] * f, y: start.y - n[3] * f))
+        }
+        post(.leftMouseUp, NSPoint(x: start.x + n[2], y: start.y - n[3]))
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let moved = window.frame.origin != frameBefore
+            print("SELFTEST key=\(window.isKeyWindow) windowMoved=\(moved) before[\(stateBefore)] after[\(EditorWindows.debugState?() ?? "-")]")
+            NSApp.terminate(nil)
+        }
+    }
+    #endif
+
     private let monitor = DragMonitor()
     private let ring = RingController()
     private let dispatcher = ActionDispatcher()
@@ -78,6 +118,10 @@ final class AppState: ObservableObject {
             let crop = args[flag + 1] == "crop"
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 crop ? EditorWindows.openCrop(file) { _ in } : EditorWindows.openAddBackground(file) { _ in }
+                if let spec = ProcessInfo.processInfo.environment["SHIFTDROP_SELFTEST_DRAG"] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { AppState.selfTestDrag(spec) }
+                    return
+                }
                 guard let path = ProcessInfo.processInfo.environment["SHIFTDROP_SNAPSHOT"] else { return }
                 if let name = ProcessInfo.processInfo.environment["SHIFTDROP_APPEARANCE"] {
                     NSApp.appearance = NSAppearance(named: name == "dark" ? .darkAqua : .aqua)

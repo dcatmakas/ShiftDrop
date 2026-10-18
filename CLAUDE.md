@@ -31,3 +31,5 @@ Interactive tools (Crop, Add background) open windows from `ActionDispatcher` â†
 - `AVAssetWriter.shouldOptimizeForNetworkUse = true` left `.sb-*` temp files next to outputs â€” keep it off in `VideoCompressor`.
 - Apple's HEVC export presets didn't shrink typical clips; `VideoCompressor` sets the bitrate itself.
 - Compress deletes its output and reports "already compact" if it isn't smaller.
+- Editor windows must not use `isMovableByWindowBackground`: SwiftUI views report `mouseDownCanMoveWindow == true`, so the window server drags the whole window before crop handles or sliders get the mouse. The transparent title strip is what moves the window.
+- Synthetic `NSEvent`s can't reproduce that kind of bug (window-server drags only happen for real input). Debug builds have `SHIFTDROP_SELFTEST_DRAG="x,y,dx,dy"` with `--demo-editor` to check that a drag reaches the editor; launch the app with `open` (not as a child process) or the window never becomes key.
