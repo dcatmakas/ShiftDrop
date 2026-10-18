@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ShiftDropCore
 import SwiftUI
 
 /// Opens the Crop and Add BG editors. The app has no Dock icon, so each editor is a
@@ -15,6 +16,12 @@ enum EditorWindows {
             showError(error, for: url)
             return
         }
+        #if DEBUG
+        // Lets README screenshots show a crop in progress: SHIFTDROP_DEMO_CROP=square|wide|...
+        if let raw = ProcessInfo.processInfo.environment["SHIFTDROP_DEMO_CROP"], let aspect = CropAspect(rawValue: raw) {
+            model.aspect = aspect
+        }
+        #endif
         present(title: "Crop", size: NSSize(width: 520, height: 640)) { close in
             CropEditorView(model: model, onClose: close, onSaved: onSaved)
         }

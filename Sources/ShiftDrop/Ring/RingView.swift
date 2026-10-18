@@ -9,6 +9,8 @@ struct RingView: View {
 
     private var count: Int { model.actions.count }
     static let isSnapshot = ProcessInfo.processInfo.environment["SHIFTDROP_SNAPSHOT"] != nil
+    /// SHIFTDROP_SNAPSHOT_GLASS=clear leaves glass surfaces empty so a script can paint real blur behind them.
+    static let snapshotGlassOpacity: Double = ProcessInfo.processInfo.environment["SHIFTDROP_SNAPSHOT_GLASS"] == "clear" ? 0 : 0.78
     private var slice: Double { 2 * .pi / Double(max(count, 1)) }
 
     var body: some View {
@@ -35,10 +37,10 @@ struct RingView: View {
         if Self.isSnapshot {
             // Offscreen snapshots can't render glass; approximate it so layout can be reviewed.
             Circle()
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.78))
-                .overlay(Circle().strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
+                .fill(Color(nsColor: .windowBackgroundColor).opacity(Self.snapshotGlassOpacity))
+                .overlay(Circle().strokeBorder(.white.opacity(Self.snapshotGlassOpacity > 0 ? 0.3 : 0), lineWidth: 0.5))
                 .frame(width: size, height: size)
-                .shadow(color: .black.opacity(0.22), radius: 26, y: 12)
+                .shadow(color: .black.opacity(Self.snapshotGlassOpacity > 0 ? 0.22 : 0), radius: 26, y: 12)
         } else if #available(macOS 26.0, *) {
             Circle()
                 .fill(.clear)
@@ -250,7 +252,8 @@ private struct ModeSwitch: View {
 private struct GlassCapsule: ViewModifier {
     func body(content: Content) -> some View {
         if RingView.isSnapshot {
-            content.background(Color(nsColor: .windowBackgroundColor).opacity(0.78), in: Capsule())
+            // A near-invisible fill in "clear" mode still marks the capsule's bounds for the compositing script.
+            content.background(Color(nsColor: .windowBackgroundColor).opacity(max(RingView.snapshotGlassOpacity, 0.02)), in: Capsule())
         } else if #available(macOS 26.0, *) {
             content.glassEffect(.regular, in: Capsule())
         } else {
