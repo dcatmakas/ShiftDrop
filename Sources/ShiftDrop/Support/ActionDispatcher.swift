@@ -31,7 +31,7 @@ final class ActionDispatcher {
     private func openEditor(_ tool: Tool, for urls: [URL]) {
         guard let url = urls.first else { return }
         guard FileKind.of(url) == .image else {
-            Toast.shared.show("\(tool.title.capitalized) works on images", style: .failure)
+            Toast.shared.show("\(tool.title) works on images only", style: .failure)
             return
         }
         let onSaved: (URL) -> Void = { output in
@@ -72,7 +72,7 @@ final class ActionDispatcher {
     private static func progressTitle(for action: RingAction) -> String {
         switch action.kind {
         case .convert(let format): return "Converting to \(format.label)…"
-        case .tool(let tool): return "\(tool.title.capitalized)…"
+        case .tool(let tool): return "\(tool.title)…"
         }
     }
 }

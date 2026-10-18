@@ -115,7 +115,7 @@ struct BackgroundEditorView: View {
     var onSaved: (URL) -> Void
 
     var body: some View {
-        EditorChrome(title: "Add BG") {
+        EditorChrome(title: "Add background") {
             VStack(spacing: 14) {
                 previewArea
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -141,7 +141,7 @@ struct BackgroundEditorView: View {
                     Button("Reset") { model.reset() }
                         .buttonStyle(SecondaryButtonStyle())
                     Spacer()
-                    Button(model.isSaving ? "Saving…" : "Save with Background") { save() }
+                    Button(model.isSaving ? "Saving…" : "Save copy") { save() }
                         .buttonStyle(PrimaryButtonStyle())
                         .keyboardShortcut(.defaultAction)
                         .disabled(model.isSaving)
@@ -185,7 +185,7 @@ struct BackgroundEditorView: View {
                 .frame(width: geo.size.width, height: geo.size.height)
             }
         }
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.black.opacity(0.06)))
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(EditorStyle.well))
     }
 
     private func fitted(_ size: CGSize, in container: CGSize, inset: CGFloat) -> CGSize {
@@ -215,7 +215,7 @@ struct BackgroundEditorView: View {
                             if let custom = model.customImage {
                                 Image(decorative: custom, scale: 1).resizable().scaledToFill()
                             } else {
-                                Color.white.opacity(0.8)
+                                EditorStyle.control
                                 Image(systemName: "photo")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(EditorStyle.inkSoft)
@@ -258,7 +258,7 @@ struct BackgroundEditorView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(Color.black.opacity(0.12), lineWidth: 0.5)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
                 )
                 .padding(2)
                 .overlay(

@@ -1,146 +1,268 @@
 import ShiftDropCore
 import SwiftUI
 
-/// The pie menu: a glass disc with one rounded wedge per action and a pill in the middle.
+/// A glass dial: items around the rim, a highlight that slides to the hovered one,
+/// and a lens in the middle showing the file and what the drop will produce.
 struct RingView: View {
     @ObservedObject var model: RingModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var count: Int { model.actions.count }
+    static let isSnapshot = ProcessInfo.processInfo.environment["SHIFTDROP_SNAPSHOT"] != nil
+    private var slice: Double { 2 * .pi / Double(max(count, 1)) }
 
     var body: some View {
         ZStack {
-            disc
-
-            ForEach(Array(model.actions.enumerated()), id: \.element.id) { index, action in
-                SegmentView(
-                    action: action,
-                    index: index,
-                    count: model.actions.count,
-                    isHovered: model.hoveredIndex == index
-                )
-            }
-            .id(model.mode) // fresh views per page so the swap animates
-            .transition(.asymmetric(
-                insertion: .scale(scale: 0.92).combined(with: .opacity),
-                removal: .opacity
-            ))
-
-            CenterPill(text: model.centerText, isHovering: model.hoveredIndex != nil)
+            dial
+            dividers
+            highlight
+            labels
+            Lens(model: model)
+            ModeSwitch(mode: model.mode)
+                .offset(y: RingGeometry.dialRadius + 26)
         }
         .frame(width: RingGeometry.panelSize, height: RingGeometry.panelSize)
-        .scaleEffect(model.isVisible ? 1 : 0.7)
+        .scaleEffect(model.isVisible || reduceMotion ? 1 : 0.86)
         .opacity(model.isVisible ? 1 : 0)
-        .animation(.spring(response: 0.28, dampingFraction: 0.78), value: model.isVisible)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.mode)
-        .animation(.easeOut(duration: 0.12), value: model.hoveredIndex)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.isVisible)
     }
+
+    // MARK: - Layers
 
     @ViewBuilder
-    private var disc: some View {
-        let size = RingGeometry.outerRadius * 2
-        let shape = Circle()
-        if #available(macOS 26.0, *) {
-            shape
-                .fill(Palette.disc.opacity(0.35))
+    private var dial: some View {
+        let size = RingGeometry.dialRadius * 2
+        if Self.isSnapshot {
+            // Offscreen snapshots can't render glass; approximate it so layout can be reviewed.
+            Circle()
+                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.78))
+                .overlay(Circle().strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
                 .frame(width: size, height: size)
-                .glassEffect(.regular, in: shape)
-                .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+                .shadow(color: .black.opacity(0.22), radius: 26, y: 12)
+        } else if #available(macOS 26.0, *) {
+            Circle()
+                .fill(.clear)
+                .frame(width: size, height: size)
+                .glassEffect(.regular, in: Circle())
+                .shadow(color: .black.opacity(0.22), radius: 26, y: 12)
         } else {
-            shape
-                .fill(.ultraThinMaterial)
-                .overlay(shape.fill(Palette.disc.opacity(0.35)))
-                .overlay(shape.strokeBorder(.white.opacity(0.55), lineWidth: 1))
+            Circle()
+                .fill(.regularMaterial)
+                .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
                 .frame(width: size, height: size)
-                .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+                .shadow(color: .black.opacity(0.22), radius: 26, y: 12)
         }
     }
-}
 
-enum Palette {
-    static let disc = Color(red: 1.0, green: 0.93, blue: 0.86)
-    static let segment = Color(red: 1.0, green: 0.88, blue: 0.76)
-    static let segmentHover = Color(red: 0.94, green: 0.33, blue: 0.11)
-    static let ink = Color(red: 0.33, green: 0.2, blue: 0.13)
-    static let pill = Color(red: 1.0, green: 0.92, blue: 0.84)
-}
+    /// Hairlines between items, like the marks on a dial.
+    private var dividers: some View {
+        Path { path in
+            guard count > 1 else { return }
+            let c = RingGeometry.panelSize / 2
+            for index in 0..<count {
+                let angle = RingGeometry.centerAngle(of: index, count: count) + slice / 2
+                let from = RingGeometry.bandInner + 8, to = RingGeometry.bandOuter - 8
+                path.move(to: CGPoint(x: c + from * sin(angle), y: c - from * cos(angle)))
+                path.addLine(to: CGPoint(x: c + to * sin(angle), y: c - to * cos(angle)))
+            }
+        }
+        .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+        .id(model.mode)
+        .transition(.opacity)
+        .animation(.easeOut(duration: 0.2), value: model.mode)
+    }
 
-private struct SegmentView: View {
-    let action: RingAction
-    let index: Int
-    let count: Int
-    let isHovered: Bool
-
-    var body: some View {
-        let slice = 2 * Double.pi / Double(count)
-        let mid = RingGeometry.centerAngle(of: index, count: count)
+    private var highlight: some View {
+        // With few items a full slice is a huge slab of color; cap it so it reads as a pointer.
+        let width = min(slice, 64 * .pi / 180)
         let wedge = WedgeShape(
-            start: mid - slice / 2, end: mid + slice / 2,
-            inner: RingGeometry.segmentInner, outer: RingGeometry.segmentOuter,
+            start: model.highlightAngle - width / 2, end: model.highlightAngle + width / 2,
+            inner: RingGeometry.bandInner, outer: RingGeometry.bandOuter,
             halfGap: count > 1 ? RingGeometry.gap / 2 : 0, corner: RingGeometry.corner
         )
-        let fill = isHovered ? Palette.segmentHover : Palette.segment
+        // Fill + a thick round-joined stroke of the same color = a wedge with rounded corners.
+        let solid = ZStack {
+            wedge.fill(Color.accentColor)
+            wedge.stroke(Color.accentColor, style: StrokeStyle(lineWidth: RingGeometry.corner * 2, lineJoin: .round))
+        }
+        return solid
+            .overlay(
+                LinearGradient(colors: [.white.opacity(0.22), .clear], startPoint: .top, endPoint: .bottom)
+                    .mask(solid)
+            )
+            .compositingGroup()
+            .shadow(color: Color.accentColor.opacity(0.4), radius: 12)
+            .opacity(model.hoveredIndex == nil ? 0 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.84), value: model.highlightAngle)
+            .animation(.easeOut(duration: 0.12), value: model.hoveredIndex == nil)
+    }
 
+    private var labels: some View {
         ZStack {
-            // Fill + a thick round-joined stroke of the same color = a wedge with rounded corners.
-            wedge.fill(fill)
-                .overlay(wedge.stroke(fill, style: StrokeStyle(lineWidth: RingGeometry.corner * 2, lineJoin: .round)))
-                .compositingGroup()
-                .opacity(isHovered ? 1 : 0.92)
-                .shadow(color: .black.opacity(isHovered ? 0.18 : 0.06), radius: isHovered ? 6 : 2, y: 1)
-
-            label
-                .foregroundStyle(isHovered ? Color.white : Palette.ink)
-                .position(labelPosition(angle: mid))
+            ForEach(Array(model.actions.enumerated()), id: \.element.id) { index, action in
+                ItemLabel(action: action, isHovered: model.hoveredIndex == index)
+                    .position(labelPosition(index))
+            }
         }
         .frame(width: RingGeometry.panelSize, height: RingGeometry.panelSize)
-        .scaleEffect(isHovered ? 1.04 : 1)
+        .id(model.mode)
+        // Switching pages turns the dial a notch.
+        .transition(reduceMotion ? .opacity : .asymmetric(
+            insertion: .modifier(active: DialTurn(degrees: -24, opacity: 0), identity: DialTurn(degrees: 0, opacity: 1)),
+            removal: .modifier(active: DialTurn(degrees: 24, opacity: 0), identity: DialTurn(degrees: 0, opacity: 1))
+        ))
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: model.mode)
     }
 
-    @ViewBuilder
-    private var label: some View {
-        if let symbol = action.symbol {
-            VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 15, weight: .semibold))
-                Text(action.title).font(.system(size: 9.5, weight: .bold)).tracking(0.3)
-            }
-            .fixedSize()
-        } else {
-            Text(action.title)
-                .font(.system(size: 13, weight: .bold))
-                .tracking(0.4)
-                .fixedSize()
-        }
-    }
-
-    private func labelPosition(angle: Double) -> CGPoint {
+    private func labelPosition(_ index: Int) -> CGPoint {
+        let angle = RingGeometry.centerAngle(of: index, count: count)
         let c = RingGeometry.panelSize / 2
-        let r = RingGeometry.labelRadius + 4
+        let r = RingGeometry.labelRadius
         return CGPoint(x: c + r * sin(angle), y: c - r * cos(angle))
     }
 }
 
-private struct CenterPill: View {
-    let text: String
-    let isHovering: Bool
+private struct DialTurn: ViewModifier {
+    let degrees: Double
+    let opacity: Double
+
+    func body(content: Content) -> some View {
+        content.rotationEffect(.degrees(degrees)).opacity(opacity)
+    }
+}
+
+private struct ItemLabel: View {
+    let action: RingAction
+    let isHovered: Bool
 
     var body: some View {
-        Text(text)
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(Palette.ink)
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .padding(.horizontal, 14)
-            .frame(minWidth: 84, minHeight: 34)
-            .background(
-                Capsule().fill(Palette.pill)
-                    .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
-            )
-            .frame(maxWidth: RingGeometry.segmentInner * 2 - 8)
+        Group {
+            if let symbol = action.symbol {
+                VStack(spacing: 5) {
+                    Image(systemName: symbol)
+                        .font(.system(size: 17, weight: .regular))
+                        .frame(height: 20)
+                    Text(action.title)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .frame(width: 70)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                Text(action.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .tracking(0.3)
+                    .fixedSize()
+            }
+        }
+        .foregroundStyle(isHovered ? Color.white : Color.primary.opacity(0.85))
+        .scaleEffect(isHovered ? 1.06 : 1)
+        .animation(.easeOut(duration: 0.15), value: isHovered)
+    }
+}
+
+/// The middle of the dial: a preview of the dragged file and what the drop will make.
+private struct Lens: View {
+    @ObservedObject var model: RingModel
+
+    var body: some View {
+        let size = RingGeometry.lensRadius * 2
+        VStack(spacing: 7) {
+            Thumbnails(images: model.thumbnails)
+                .frame(height: 50)
+            VStack(spacing: 2) {
+                Text(model.lensTitle)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(model.lensSubtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(width: size - 30)
             .contentTransition(.opacity)
-            .animation(.easeOut(duration: 0.1), value: text)
+            .animation(.easeOut(duration: 0.12), value: model.lensTitle)
+        }
+        .frame(width: size, height: size)
+        .background(Circle().fill(Color.primary.opacity(0.045)))
+        .overlay(Circle().strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5))
+    }
+}
+
+/// One preview, or up to three fanned out for several files.
+private struct Thumbnails: View {
+    let images: [NSImage]
+
+    var body: some View {
+        ZStack {
+            ForEach(Array(images.enumerated().reversed()), id: \.offset) { index, image in
+                let spread = Double(index) - Double(images.count - 1) / 2
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 50, maxHeight: 50)
+                    .shadow(color: .black.opacity(0.2), radius: 3, y: 1)
+                    .rotationEffect(.degrees(spread * 9))
+                    .offset(x: spread * 9)
+            }
+        }
+    }
+}
+
+/// Shows which page is open and that Shift flips it.
+private struct ModeSwitch: View {
+    let mode: RingMode
+    @Namespace private var selection
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Text("⇧")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 7)
+            segment("Convert", active: mode == .convert)
+            segment("Tools", active: mode == .tools)
+        }
+        .padding(3)
+        .modifier(GlassCapsule())
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: mode)
+    }
+
+    private func segment(_ title: String, active: Bool) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: active ? .semibold : .regular))
+            .foregroundStyle(active ? Color.primary : Color.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background {
+                if active {
+                    Capsule().fill(Color.primary.opacity(0.1))
+                        .matchedGeometryEffect(id: "selection", in: selection)
+                }
+            }
+    }
+}
+
+private struct GlassCapsule: ViewModifier {
+    func body(content: Content) -> some View {
+        if RingView.isSnapshot {
+            content.background(Color(nsColor: .windowBackgroundColor).opacity(0.78), in: Capsule())
+        } else if #available(macOS 26.0, *) {
+            content.glassEffect(.regular, in: Capsule())
+        } else {
+            content
+                .background(.regularMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
+        }
     }
 }
 
 /// An annular wedge with parallel-sided gaps. Corners get rounded by the caller's stroke,
-/// so the path is shrunk by `corner` on every side to compensate.
+/// so the path is shrunk by `corner` on every side to compensate. Angles animate.
 struct WedgeShape: Shape {
     var start: Double
     var end: Double
@@ -148,6 +270,11 @@ struct WedgeShape: Shape {
     var outer: CGFloat
     var halfGap: CGFloat
     var corner: CGFloat
+
+    var animatableData: AnimatablePair<Double, Double> {
+        get { AnimatablePair(start, end) }
+        set { start = newValue.first; end = newValue.second }
+    }
 
     func path(in rect: CGRect) -> Path {
         let center = CGPoint(x: rect.midX, y: rect.midY)

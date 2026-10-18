@@ -23,17 +23,34 @@ public enum Tool: String, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .compress: return "COMPRESS"
-        case .removeBackground: return "REMOVE BG"
-        case .addBackground: return "ADD BG"
-        case .crop: return "CROP"
-        case .stripMetadata: return "STRIP EXIF"
-        case .copyText: return "COPY TEXT"
-        case .makePDF: return "MAKE PDF"
-        case .mergePDF: return "MERGE"
-        case .splitPDF: return "SPLIT"
-        case .mute: return "MUTE"
-        case .zip: return "ZIP"
+        case .compress: return "Compress"
+        case .removeBackground: return "Remove background"
+        case .addBackground: return "Add background"
+        case .crop: return "Crop"
+        case .stripMetadata: return "Remove EXIF"
+        case .copyText: return "Copy text"
+        case .makePDF: return "Make PDF"
+        case .mergePDF: return "Merge"
+        case .splitPDF: return "Split pages"
+        case .mute: return "Mute"
+        case .zip: return "Zip"
+        }
+    }
+
+    /// One line shown in the middle of the ring while hovering.
+    public var hint: String {
+        switch self {
+        case .compress: return "Smaller copy, same look"
+        case .removeBackground: return "Transparent PNG of the subject"
+        case .addBackground: return "Opens the background editor"
+        case .crop: return "Opens the crop editor"
+        case .stripMetadata: return "Drops location and camera info"
+        case .copyText: return "Puts the text on the clipboard"
+        case .makePDF: return "One PDF, a page per image"
+        case .mergePDF: return "Joins the PDFs into one"
+        case .splitPDF: return "A separate PDF per page"
+        case .mute: return "Removes the sound"
+        case .zip: return "Packs into a .zip archive"
         }
     }
 
@@ -41,14 +58,14 @@ public enum Tool: String, CaseIterable, Sendable {
     public var symbol: String {
         switch self {
         case .compress: return "arrow.down.right.and.arrow.up.left"
-        case .removeBackground: return "person.crop.rectangle"
-        case .addBackground: return "photo.on.rectangle"
+        case .removeBackground: return "person.and.background.dotted"
+        case .addBackground: return "photo.artframe"
         case .crop: return "crop"
-        case .stripMetadata: return "eye.slash"
+        case .stripMetadata: return "location.slash"
         case .copyText: return "text.viewfinder"
-        case .makePDF: return "doc.richtext"
+        case .makePDF: return "doc.on.doc"
         case .mergePDF: return "rectangle.stack"
-        case .splitPDF: return "square.split.2x1"
+        case .splitPDF: return "rectangle.split.3x1"
         case .mute: return "speaker.slash"
         case .zip: return "archivebox"
         }
@@ -89,6 +106,14 @@ public struct RingAction: Identifiable, Hashable, Sendable {
         switch kind {
         case .convert: return nil
         case .tool(let tool): return tool.symbol
+        }
+    }
+
+    /// Short explanation of the result, for the middle of the ring.
+    public func hint(for source: FileKind) -> String {
+        switch kind {
+        case .tool(let tool): return tool.hint
+        case .convert(let format): return format.hint(from: source)
         }
     }
 }

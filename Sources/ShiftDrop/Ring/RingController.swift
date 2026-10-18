@@ -42,6 +42,9 @@ final class RingController {
 
         // SHIFTDROP_SNAPSHOT=/path.png writes the panel to an image and quits (no screen recording permission needed).
         if let path = ProcessInfo.processInfo.environment["SHIFTDROP_SNAPSHOT"] {
+            if let name = ProcessInfo.processInfo.environment["SHIFTDROP_APPEARANCE"] {
+                panel.appearance = NSAppearance(named: name == "dark" ? .darkAqua : .aqua)
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [panel] in
                 guard let view = panel.contentView,
                       let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
@@ -64,8 +67,8 @@ final class RingController {
         var frame = NSRect(x: point.x - size / 2, y: point.y - size / 2, width: size, height: size)
         // Keep the whole ring on screen; near an edge the cursor just won't be dead center.
         if let screen = NSScreen.screens.first(where: { NSMouseInRect(point, $0.frame, false) }) {
-            let visible = screen.frame.insetBy(dx: -(size - RingGeometry.outerRadius * 2) / 2,
-                                               dy: -(size - RingGeometry.outerRadius * 2) / 2)
+            let visible = screen.frame.insetBy(dx: -(size - RingGeometry.dialRadius * 2) / 2,
+                                               dy: -(size - RingGeometry.dialRadius * 2) / 2)
             frame.origin.x = min(max(frame.minX, visible.minX), visible.maxX - size)
             frame.origin.y = min(max(frame.minY, visible.minY), visible.maxY - size)
         }

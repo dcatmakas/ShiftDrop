@@ -68,7 +68,7 @@ struct CropEditorView: View {
     @State private var dragStart: CGRect?
 
     var body: some View {
-        EditorChrome(title: "Crop Image") {
+        EditorChrome(title: "Crop") {
             VStack(spacing: 14) {
                 canvas
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -103,7 +103,7 @@ struct CropEditorView: View {
                     Button("Reset") { model.reset() }
                         .buttonStyle(SecondaryButtonStyle())
                     Spacer()
-                    Button(model.isSaving ? "Saving…" : "Apply") { apply() }
+                    Button(model.isSaving ? "Saving…" : "Save copy") { apply() }
                         .buttonStyle(PrimaryButtonStyle())
                         .keyboardShortcut(.defaultAction)
                         .disabled(model.isSaving)
@@ -208,7 +208,7 @@ struct CropEditorView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.black.opacity(0.06)))
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(EditorStyle.well))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 

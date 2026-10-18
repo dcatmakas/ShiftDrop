@@ -15,7 +15,7 @@ enum EditorWindows {
             showError(error, for: url)
             return
         }
-        present(title: "Crop Image", size: NSSize(width: 520, height: 640)) { close in
+        present(title: "Crop", size: NSSize(width: 520, height: 640)) { close in
             CropEditorView(model: model, onClose: close, onSaved: onSaved)
         }
     }
@@ -29,7 +29,7 @@ enum EditorWindows {
             showError(error, for: url)
             return
         }
-        present(title: "Add BG", size: NSSize(width: 560, height: 700)) { close in
+        present(title: "Add background", size: NSSize(width: 560, height: 700)) { close in
             BackgroundEditorView(model: model, onClose: close, onSaved: onSaved)
         }
     }
@@ -56,7 +56,6 @@ enum EditorWindows {
         window.minSize = NSSize(width: size.width, height: 520)
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
-        window.appearance = NSAppearance(named: .aqua)
 
         let view = content { [weak window] in window?.close() }
         window.contentView = NSHostingView(rootView: view)

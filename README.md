@@ -9,18 +9,19 @@ The result is saved next to the original (`Photo.png` → `Photo.jpg`, `Photo Cr
 1. Start dragging one or more files in Finder or on the Desktop.
 2. Tap **⇧ Shift**. The **Convert** ring opens around the cursor.
 3. Tap **⇧ Shift** again to switch to **Tools**, and again to switch back.
-4. Drop on a segment. Drop in the middle, or anywhere else, to cancel.
+4. Hover a segment: the middle of the ring shows the file it will create. Drop to run it.
+   Drop in the middle, or anywhere outside the ring, to cancel.
 
 ## What it can do
 
 | Input | Convert | Tools |
 | --- | --- | --- |
-| Images (PNG, JPG, HEIC, WebP, AVIF, TIFF, GIF, BMP) | PNG, JPG, WebP¹, HEIC, AVIF, PDF, TIFF, TXT (text recognition), GIF, BMP | Compress, Strip EXIF, Copy Text, Remove BG, Add BG, Crop, ZIP · several images: Make PDF |
-| PDF | DOCX, JPG, PNG, TXT (one image per page) | Compress, Copy Text, Split, Merge (several PDFs), ZIP |
-| Documents (DOCX, DOC, RTF, ODT, HTML, TXT, MD) | PDF, DOCX, RTF, TXT, HTML, ODT | Copy Text, ZIP |
-| Video (MP4, MOV, M4V) | MP4, MOV, M4A (audio only), GIF | Compress (HEVC), Mute, ZIP |
-| Audio (M4A, MP3, WAV, AIFF, CAF) | M4A, WAV, AIFF, CAF | ZIP |
-| Anything else, folders | – | ZIP |
+| Images (PNG, JPG, HEIC, WebP, AVIF, TIFF, GIF, BMP) | PNG, JPG, WebP¹, HEIC, AVIF, PDF, TIFF, TXT (text recognition), GIF, BMP | Compress, Remove EXIF, Copy text, Remove background, Add background, Crop, Zip · several images: Make PDF |
+| PDF | DOCX, JPG, PNG, TXT (one image per page) | Compress, Copy text, Split pages, Merge (several PDFs), Zip |
+| Documents (DOCX, DOC, RTF, ODT, HTML, TXT, MD) | PDF, DOCX, RTF, TXT, HTML, ODT | Copy text, Zip |
+| Video (MP4, MOV, M4V) | MP4, MOV, M4A (audio only), GIF | Compress (HEVC), Mute, Zip |
+| Audio (M4A, MP3, WAV, AIFF, CAF) | M4A, WAV, AIFF, CAF | Zip |
+| Anything else, folders | – | Zip |
 
 ¹ WebP output needs `cwebp`: `brew install webp`. Everything else uses frameworks built into macOS (ImageIO, PDFKit, Vision, AVFoundation), and runs on your Mac.
 
@@ -63,7 +64,7 @@ SHIFTDROP_SNAPSHOT=/tmp/ring.png .build/debug/ShiftDrop --demo-ring ~/Desktop/ph
 Sources/ShiftDropCore/   conversion + tool logic, no UI (unit tested)
 Sources/ShiftDrop/
   Ring/                  drag detection, ring panel and view
-  Editors/               Crop and Add BG windows
+  Editors/               Crop and Add background windows
   Support/               action dispatch, toast
 Scripts/make-icon.sh     regenerates Resources/AppIcon.icns
 ```

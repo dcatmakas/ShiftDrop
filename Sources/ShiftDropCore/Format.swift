@@ -102,4 +102,33 @@ public enum Format: String, CaseIterable, Sendable {
         default: return false
         }
     }
+
+    /// What converting to this format gives you, in a few words.
+    public func hint(from source: FileKind) -> String {
+        switch self {
+        case .png: return source == .pdf ? "One image per page, sharp" : "Lossless, keeps transparency"
+        case .jpg: return source == .pdf ? "One image per page, small" : "Small and opens anywhere"
+        case .heic: return "Smallest, best on Apple devices"
+        case .webp: return "Small, made for the web"
+        case .avif: return "Smallest, modern browsers"
+        case .tiff: return "Lossless, for print"
+        case .bmp: return "Uncompressed bitmap"
+        case .gif: return source == .video ? "Looping animation, up to 20 s" : "Opens anywhere, 256 colors"
+        case .pdf: return source == .image ? "Printable one-page PDF" : "Printable PDF"
+        case .txt: return source == .image ? "Recognized text from the image" : "Plain text only"
+        case .docx: return source == .pdf ? "Editable text in Word or Pages" : "Word document"
+        case .doc: return "Older Word format"
+        case .rtf: return "Formatted text, opens anywhere"
+        case .html: return "Web page"
+        case .odt: return "OpenDocument text"
+        case .md: return "Markdown"
+        case .mp4: return "Plays everywhere"
+        case .mov: return "QuickTime movie"
+        case .m4v: return "iTunes video"
+        case .m4a: return source == .video ? "Just the audio" : "Compact AAC audio"
+        case .wav, .aiff: return "Uncompressed audio"
+        case .mp3: return "MP3 audio"
+        case .caf: return "Core Audio file"
+        }
+    }
 }

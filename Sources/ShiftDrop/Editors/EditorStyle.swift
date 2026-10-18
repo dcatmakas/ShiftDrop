@@ -1,16 +1,18 @@
+import AppKit
 import SwiftUI
 
-/// Colors and small controls shared by the editor windows (warm, light look from the ring menu).
+/// Colors and small controls shared by the editor windows.
+/// System colors throughout, so the editors follow light/dark mode and the user's accent color like the ring does.
 enum EditorStyle {
-    static let accent = Color(red: 0xF0 / 255, green: 0x53 / 255, blue: 0x1C / 255)
-    static let panel = Color(red: 1.0, green: 0xF1 / 255, blue: 0xE6 / 255)
-    static let panelDeep = Color(red: 0xFC / 255, green: 0xE3 / 255, blue: 0xCF / 255)
-    static let control = Color.white.opacity(0.75)
-    static let ink = Color(red: 0.24, green: 0.15, blue: 0.10)
-    static let inkSoft = Color(red: 0.24, green: 0.15, blue: 0.10).opacity(0.6)
+    static let accent = Color.accentColor
+    static let control = Color.primary.opacity(0.07)
+    static let ink = Color.primary
+    static let inkSoft = Color.secondary
+    /// Recessed area behind the image preview.
+    static let well = Color.primary.opacity(0.05)
 }
 
-/// Window chrome: centered title at the top, cream background.
+/// Window chrome: centered title at the top on the standard window material.
 struct EditorChrome<Content: View>: View {
     let title: String
     @ViewBuilder var content: Content
@@ -24,9 +26,7 @@ struct EditorChrome<Content: View>: View {
                 .frame(height: 30)
             content
         }
-        .background(
-            LinearGradient(colors: [EditorStyle.panel, EditorStyle.panelDeep], startPoint: .top, endPoint: .bottom)
-        )
+        .background(VisualEffectBackground())
         .ignoresSafeArea()
     }
 }
@@ -62,7 +62,7 @@ struct PillPicker<Item: Identifiable & Hashable>: View {
     }
 }
 
-/// Orange slider drawn in SwiftUI so it matches the rest of the editor.
+/// Accent-colored slider drawn in SwiftUI so it matches the rest of the editor.
 struct AccentSlider: View {
     @Binding var value: CGFloat
     let range: ClosedRange<CGFloat>
@@ -74,7 +74,7 @@ struct AccentSlider: View {
             let thumb: CGFloat = 16
             let x = (geo.size.width - thumb) * min(max(fraction, 0), 1)
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.black.opacity(0.08)).frame(height: 4)
+                Capsule().fill(Color.primary.opacity(0.12)).frame(height: 4)
                 Capsule().fill(EditorStyle.accent).frame(width: x + thumb / 2, height: 4)
                 Circle()
                     .fill(Color.white)
@@ -142,6 +142,19 @@ struct SecondaryButtonStyle: ButtonStyle {
                     .fill(EditorStyle.control.opacity(configuration.isPressed ? 0.5 : 1))
             )
     }
+}
+
+/// Behind-window blur used as the editor background (the same material as Finder's sidebar).
+struct VisualEffectBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .underWindowBackground
+        view.blendingMode = .behindWindow
+        view.state = .followsWindowActiveState
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
 
 /// Gray-white checkerboard shown behind transparent areas.
