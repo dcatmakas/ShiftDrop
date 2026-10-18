@@ -39,12 +39,19 @@ public enum ActionRunner {
         switch tool {
         case .compress:
             var result = try await eachFile(urls) { url -> [URL] in
+                let out: URL
                 switch FileKind.of(url) {
-                case .image: return [try await ImageConverter.compress(url)]
-                case .pdf: return [try PDFConverter.compress(url)]
-                case .video: return [try await MediaConverter.compressVideo(url)]
+                case .image: out = try await ImageConverter.compress(url)
+                case .pdf: out = try PDFConverter.compress(url)
+                case .video: out = try await MediaConverter.compressVideo(url)
                 default: throw ShiftDropError.unsupported("compressing \(url.pathExtension)")
                 }
+                // A "compressed" copy that is bigger than the original is useless; don't leave it behind.
+                if out.fileSize >= url.fileSize {
+                    try? FileManager.default.removeItem(at: out)
+                    throw ShiftDropError.nothingFound("\(url.lastPathComponent) is already compact")
+                }
+                return [out]
             }
             let before = urls.reduce(Int64(0)) { $0 + $1.fileSize }
             let after = result.outputs.reduce(Int64(0)) { $0 + $1.fileSize }

@@ -50,7 +50,12 @@ public enum MediaConverter {
     /// HEVC at up to 1080p. Usually a fraction of the size of phone or screen recordings.
     public static func compressVideo(_ url: URL) async throws -> URL {
         let out = OutputNamer.url(for: url, suffix: "Compressed", ext: "mp4")
-        try await export(AVURLAsset(url: url), preset: AVAssetExportPresetHEVC1920x1080, to: out, type: .mp4)
+        do {
+            try await VideoCompressor.compress(url, to: out)
+        } catch {
+            try? FileManager.default.removeItem(at: out)
+            throw error
+        }
         return out
     }
 
